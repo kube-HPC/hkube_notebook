@@ -19,9 +19,9 @@ class AlgorithmManager(object):
         
         json_data = json.loads(response.text)
         algs_names = list(map(lambda pipeline: pipeline['name'], json_data))
-        print("Got {num} algorithms: {names}".format(num=len(json_data), names=algs_names))
         if only_names:
             return algs_names
+        print("Got {num} algorithms: {names}".format(num=len(json_data), names=algs_names))
         return json_data
 
     @classmethod
