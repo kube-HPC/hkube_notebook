@@ -56,10 +56,10 @@ class ProgressHandler(object):
                     mypbar.update(adding)
                     entry['sofar'] = progress
                     if progress >= 100:
-                        #mypbar.close()
                         if (entry['calculated'] < 100):
                             # fix pbar to 100% (may be less as we use 'round' to add only integers)
                             mypbar.update(100 - entry['calculated'])
+                            mypbar.close()
                         self._shutdown()
                 except Exception as error:
                     print('ERROR in progress webhook: {}'.format(error))

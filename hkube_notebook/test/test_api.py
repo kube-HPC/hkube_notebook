@@ -1,6 +1,6 @@
 from hkube_notebook.pipeline.exec import PipelineExecutor
 from hkube_notebook.pipeline.create import PipelineBuilder
-from hkube_notebook.pipeline.follower import FollowerType
+from hkube_notebook.pipeline.tracker import TrackerType
 
 input = {
     "text": ["In mathematics and computer science, a directed acyclic graph ",
@@ -55,7 +55,7 @@ input = {
 
 pipe_name = 'moshe'
 api_server = 'http://localhost:3000/api/v1'
-pb = PipelineBuilder(pipe_name)
+pb = PipelineBuilder(pipe_name, api_server_base_url=api_server)
 pb.add_node(node_name='green', alg_name='green-alg', input=["@flowInput.tata"])
 pb.add_node(node_name='yellow', alg_name='yellow-alg', input=["@green"])
 pb.add_node(node_name='black', alg_name='black-alg', input=["@yellow"])
@@ -64,16 +64,16 @@ print(moshe_raw)
 
 # store pipeline
 print('>>>>> STORE MOSHE')
-pb.store(api_server)
+pb.store()
 
 # exec stored
 print('>>>>> EXEC STORED MOSHE')
-pm = PipelineExecutor(api_server, name=pipe_name, follower=FollowerType.LISTENER)
+pm = PipelineExecutor(api_server, name=pipe_name, tracker=TrackerType.LISTENER)
 pm.exec(timeout_sec=20)
 
 # delete stored
 print('>>>>> DELETE STORED MOSHE')
-pb.delete(api_server)
+pb.delete()
 
 # exec raw
 print('>>>>> EXEC RAW MOSHE')

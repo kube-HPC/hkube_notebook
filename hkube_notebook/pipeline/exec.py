@@ -8,21 +8,21 @@ import requests
 import socket
 import random
 from .progress import ProgressHandler
-from .follower import FollowerType, ListenerFollower, PollFollower
+from .tracker import TrackerType, ListenerTracker, PollingTracker
 from ..api_utils import report_request_error, is_success, JSON_HEADERS
 
 MAX_RESULTS = 10
 
 class PipelineExecutor(object):
-    """ Manages an Hkube Pipeline execution (exec, run, follow status, get results, stop, etc.) """
+    """ Manages an Hkube Pipeline execution (exec, run, track status, get results, stop, etc.) """
 
-    def __init__(self, api_server_base_url, name=None, raw=None, follower=FollowerType.LISTENER, progress_port=0):
+    def __init__(self, api_server_base_url, name=None, raw=None, tracker=TrackerType.LISTENER, progress_port=0):
         """ 
         :param name pipeline name, optional - for stored pipeline
         :param raw raw pipeline object, optional - for raw pipeline (overides name if given)
         :param api_server_base_url includes protocol, host, port, base path
-        :param follower pipeline tracking method: listener or poller
-        :param progress_port port to listen to progress messages (optional with default for listener follower only)
+        :param tracker pipeline tracking method: listener or polling
+        :param progress_port port to listen to progress messages (optional with default for listener tracker only)
         """
         if name is None and raw is None:
             raise Exception('ERROR: nor stored pipeline "name" nor "raw" pipeline is given!')
@@ -35,19 +35,19 @@ class PipelineExecutor(object):
             self._name = name
         self._jobId = None
         self._base_url = api_server_base_url
-        self._follower_type = follower
-        self._follower = None
+        self._tracker_type = tracker
+        self._tracker = None
         self._pbar = None
         if progress_port == 0:
             progress_port = random.randint(50001, 59999)
         self._progress_port = progress_port
         
 
-    def _create_follower(self):
-        if self._follower_type is FollowerType.LISTENER:
-            self._follower = ListenerFollower(progress_port=self._progress_port)
+    def _create_tracker(self):
+        if self._tracker_type is TrackerType.LISTENER:
+            self._tracker = ListenerTracker(progress_port=self._progress_port)
         else:
-            self._follower = PollFollower(self._base_url)
+            self._tracker = PollingTracker(self._base_url)
 
     def _get_exec_body(self, input):
         if self._raw:
@@ -61,7 +61,7 @@ class PipelineExecutor(object):
             }
 
         body['flowInput'] = input
-        if self._follower_type is FollowerType.LISTENER:
+        if self._tracker_type is TrackerType.LISTENER:
             body['options']['progressVerbosityLevel'] = 'debug'
             body['webhooks'] = {
                 "progress": "http://{host}:{port}/webhook/progress".format(
@@ -77,9 +77,9 @@ class PipelineExecutor(object):
 
     def _exec(self, input):
         self.cleanup()
-        self._create_follower()
+        self._create_tracker()
         self._pbar = tqdm_notebook(total=100)   # create new pregress bar
-        self._follower.prepare()
+        self._tracker.prepare()
         
         # run pipeline
         body = self._get_exec_body(input)
@@ -88,7 +88,7 @@ class PipelineExecutor(object):
         response = requests.post(exec_url, headers=JSON_HEADERS, data=json_data)
         if not is_success(response):
             report_request_error(response, 'exec pipeline "{name}"'.format(name=self._name))
-            self._follower.cleanup()
+            self._tracker.cleanup()
             return None
 
         resp_body = json.loads(response.text)
@@ -106,13 +106,13 @@ class PipelineExecutor(object):
         # execute
         self._exec(input)        
         # wait to finish
-        self._follower.follow(jobId=self._jobId, pbar=self._pbar, timeout_sec=0)
+        self._tracker.follow(jobId=self._jobId, pbar=self._pbar, timeout_sec=0)
         return self._jobId
 
 
     def exec(self, input={}, timeout_sec=None, max_displayed_results=MAX_RESULTS):
         """ 
-        Execute the pipeline, follow progress and report results 
+        Execute the pipeline, track progress and report results 
 
         :param input pipeline input
         :param timeout_sec time to track progress before return (None: return upon completion/fail/stopped)
@@ -122,7 +122,7 @@ class PipelineExecutor(object):
         # execute
         self._exec(input)        
         # wait to finish
-        self._follower.follow(jobId=self._jobId, pbar=self._pbar, timeout_sec=timeout_sec)
+        self._tracker.follow(jobId=self._jobId, pbar=self._pbar, timeout_sec=timeout_sec)
 
         # get results
         results = self.get_results(max_display=max_displayed_results)
@@ -198,13 +198,13 @@ class PipelineExecutor(object):
         return True
 
     def cleanup(self):
-        """ Clean jobId and follower object """
+        """ Clean jobId and tracker object """
         # print('<<Executor-Cleanup>>')
         if self._pbar is not None:
             self._pbar.close()
-        if self._follower is not None:
-            self._follower.cleanup()
-            self._follower = None
+        if self._tracker is not None:
+            self._tracker.cleanup()
+            self._tracker = None
         self._jobId = None
         
 
