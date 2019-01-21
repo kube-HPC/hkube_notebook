@@ -1,7 +1,6 @@
 import json
 import logging
 import time
-from tqdm import tqdm_notebook, tqdm
 from flask import Flask, request, abort
 from threading import Thread
 import requests
@@ -16,13 +15,13 @@ MAX_RESULTS = 10
 class PipelineExecutor(object):
     """ Manages an Hkube Pipeline execution (exec, run, track status, get results, stop, etc.) """
 
-    def __init__(self, api_server_base_url, name=None, raw=None, tracker=TrackerType.LISTENER, progress_port=0):
+    def __init__(self, api_server_base_url, name=None, raw=None, tracker=TrackerType.LISTENER, first_progress_port=0):
         """ 
         :param name pipeline name, optional - for stored pipeline
         :param raw raw pipeline object, optional - for raw pipeline (overides name if given)
         :param api_server_base_url includes protocol, host, port, base path
         :param tracker pipeline tracking method: listener or polling
-        :param progress_port port to listen to progress messages (optional with default for listener tracker only)
+        :param first_progress_port first port for listening to progress messages (optional with default for listener tracker only)
         """
         if name is None and raw is None:
             raise Exception('ERROR: nor stored pipeline "name" nor "raw" pipeline is given!')
@@ -33,21 +32,21 @@ class PipelineExecutor(object):
             self._name = raw['name']    
         else:
             self._name = name
-        self._jobId = None
         self._base_url = api_server_base_url
         self._tracker_type = tracker
-        self._tracker = None
-        self._pbar = None
-        if progress_port == 0:
-            progress_port = random.randint(50001, 59999)
-        self._progress_port = progress_port
+        self._trackers = dict()
+        if first_progress_port == 0:
+            first_progress_port = random.randint(50000, 59999)
+        self._progress_port = first_progress_port
         
 
     def _create_tracker(self):
         if self._tracker_type is TrackerType.LISTENER:
-            self._tracker = ListenerTracker(progress_port=self._progress_port)
+            self._progress_port += 1    # avoid port collision
+            tracker = ListenerTracker(name=self._name, executor=self, progress_port=self._progress_port)
         else:
-            self._tracker = PollingTracker(self._base_url)
+            tracker = PollingTracker(name=self._name, executor=self)
+        return tracker
 
     def _get_exec_body(self, input):
         if self._raw:
@@ -76,10 +75,8 @@ class PipelineExecutor(object):
         return url
 
     def _exec(self, input):
-        self.cleanup()
-        self._create_tracker()
-        self._pbar = tqdm_notebook(total=100)   # create new pregress bar
-        self._tracker.prepare()
+        tracker = self._create_tracker()
+        tracker.prepare()
         
         # run pipeline
         body = self._get_exec_body(input)
@@ -88,12 +85,13 @@ class PipelineExecutor(object):
         response = requests.post(exec_url, headers=JSON_HEADERS, data=json_data)
         if not is_success(response):
             report_request_error(response, 'exec pipeline "{name}"'.format(name=self._name))
-            self._tracker.cleanup()
-            return None
+            tracker.cleanup()
+            return None, None
 
         resp_body = json.loads(response.text)
-        self._jobId = resp_body['jobId']
-        print('OK - pipeline is running, jobId: {}'.format(self._jobId))
+        jobId = resp_body['jobId']
+        print('OK - pipeline is running, jobId: {}'.format(jobId))
+        return jobId, tracker
 
 
     def exec_async(self, input={}):
@@ -104,10 +102,13 @@ class PipelineExecutor(object):
         :return: jobId
         """
         # execute
-        self._exec(input)        
+        jobId, tracker = self._exec(input)
+        if jobId is None or tracker is None:
+            return None
+        self._trackers[jobId] = tracker
         # wait to finish
-        self._tracker.follow(jobId=self._jobId, pbar=self._pbar, timeout_sec=0)
-        return self._jobId
+        tracker.follow(jobId=jobId, timeout_sec=0)
+        return jobId
 
 
     def exec(self, input={}, timeout_sec=None, max_displayed_results=MAX_RESULTS):
@@ -120,31 +121,35 @@ class PipelineExecutor(object):
         :return: list of results
         """
         # execute
-        self._exec(input)        
+        jobId, tracker = self._exec(input)        
+        if jobId is None or tracker is None:
+            return None
+        self._trackers[jobId] = tracker       
         # wait to finish
-        self._tracker.follow(jobId=self._jobId, pbar=self._pbar, timeout_sec=timeout_sec)
+        tracker.follow(jobId=jobId, timeout_sec=timeout_sec)
 
         # get results
-        results = self.get_results(max_display=max_displayed_results)
-        self._pbar.close()
+        results = self.get_results(jobId=jobId, max_display=max_displayed_results)
+        # self._pbar.close()
         print('<<<<< finished')
         return results
 
-    def get_results(self, max_display=0):
-        """ Get results for last pipeline job """
-        if self._jobId is None:
+    def get_results(self, jobId, max_display=0):
+        """ Get results for a pipeline job """
+        if jobId is None:
             print('ERROR: no valid jobId')
             return
 
         print("getting results...")
-        result_url = self._base_url + '/exec/results/' + self._jobId
+        result_url = self._base_url + '/exec/results/' + jobId
         time.sleep(1)
         response = requests.get(result_url, headers=JSON_HEADERS)
         # print('result status: {}'.format(response.status_code))
         if is_success(response):
             json_data = json.loads(response.text)
             status = json_data['status']
-            print('pipeline "{}" status: {}'.format(self._name, status))
+            name = json_data['pipeline']
+            print('pipeline "{}" status: {}'.format(name, status))
             if status == 'completed':
                 # self._pbar.update(1) # force pbar to be green (ensure 100%, it may be less because use of round)
                 timeTook = json_data['timeTook']
@@ -166,25 +171,21 @@ class PipelineExecutor(object):
                 return data
                     
             elif status == 'failed':
-                try:
-                    self._pbar.update(-1) # force pbar to be red
-                except Exception:
-                    pass
                 return list()
         else:
             report_request_error(response, 
-                'get results for jobId {jobid}'.format(jobid=self._jobId))
+                'get results for jobId {jobid}'.format(jobid=jobId))
             return list()
 
-    def stop(self, reason='stop in jupyter notebook'):
-        """ Stop current jobId """
-        if self._jobId is None:
+    def stop(self, jobId, reason='stop in jupyter notebook'):
+        """ Stop pipeline of jobId """
+        if jobId is None:
             print('ERROR: cannot stop - no jobId!')
             return False
 
         stop_url = '{base}/exec/stop'.format(base=self._base_url)
         stop_body = {
-            "jobId": self._jobId,
+            "jobId": jobId,
             "reason": reason
         }
         json_data = json.dumps(stop_body)
@@ -193,24 +194,52 @@ class PipelineExecutor(object):
             report_request_error(response, 'delete pipeline "{name}"'.format(name=self._name))
             return False
         else:
-            print('OK - pipeline "{name}" stopped, jobId: {jobId}'.format(name=self._name, jobId=self._jobId))
+            print('OK - pipeline "{name}" stopped, jobId: {jobId}'.format(name=self._name, jobId=jobId))
         self.cleanup()
         return True
 
-    def cleanup(self):
-        """ Clean jobId and tracker object """
-        # print('<<Executor-Cleanup>>')
-        if self._pbar is not None:
-            self._pbar.close()
-        if self._tracker is not None:
-            self._tracker.cleanup()
-            self._tracker = None
-        self._jobId = None
-        
+    def clean_tracker(self, jobId):
+        if jobId is None:
+            return
+        if jobId in self._trackers.keys():
+            del self._trackers[jobId]
 
-    def get_jsonId(self):
-        """ Get jobId of last executed pipeline """
-        return self._jobId
+    def cleanup(self):
+        """ Clean all trackers """
+        # print('<<Executor-Cleanup>>')
+        self._trackers.clear()
+    
+    def get_all_status(self):
+        """ Get status of all active pipeline jobs that were staring here """
+        status_list = list()
+        if len(self._trackers.keys()) == 0:
+            print('executor has no active jobs')
+            return status_list
+        for jobId in self._trackers.keys():
+            status_info = PipelineExecutor.get_status(api_server_base_url=self._base_url, jobId=jobId)
+            status_list.append(status_info)
+            status = status_info['status']
+            data = status_info['data']
+            details = data['details']
+            print('jobId {jobId}: {status} - {details}'.format(
+                jobId=jobId, status=status, details=details
+            ))
+        return status_list
+            
+    def _get_status(self, jobId):
+        return PipelineExecutor.get_status(api_server_base_url=self._base_url, jobId=jobId)
+
+
+    @classmethod
+    def get_status(cls, api_server_base_url, jobId):
+        """ Get status of given jobId """
+        status_url = '{base}/exec/status/{jobId}'.format(base=api_server_base_url, jobId=jobId)
+        response = requests.get(status_url, headers=JSON_HEADERS)
+        if not is_success(response):
+            report_request_error(response, 'status request for {}'.format(jobId))
+            return None
+        return json.loads(response.text)
+
 
     @classmethod
     def get_all_stored(cls, api_server_base_url):

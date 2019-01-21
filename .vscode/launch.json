@@ -63,10 +63,18 @@
             "console": "externalTerminal",
         },
         {
-            "name": "Python Test",
+            "name": "Python Test Sync",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/hkube_notebook/test/test_api.py",
+            "console": "integratedTerminal",
+            "stopOnEntry": true,
+        },
+        {
+            "name": "Python Test Async",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/hkube_notebook/test/test_async.py",
             "console": "integratedTerminal",
             "stopOnEntry": true,
         }

@@ -11,13 +11,14 @@ import random
 class ProgressHandler(object):
     """ Manage flask server for handling progress messages """
 
-    def __init__(self, session_map: dict):
+    def __init__(self, session_map: dict, trackerClass):
         log = logging.getLogger('werkzeug')
         log.setLevel(logging.ERROR)
         self._app = Flask('progress_server')
         self._port = 0
         self._host = socket.gethostname()
         self._session_map = session_map
+        self._trackerClass = trackerClass
 
             # shutdown handler
         @self._app.route('/webhook/shutdown', methods=['PUT'])
@@ -29,15 +30,14 @@ class ProgressHandler(object):
         @self._app.route('/webhook/progress', methods=['POST'])
         def webhook():
             if request.method == 'POST':
-                #print('post')
                 # start handling
                 try:
                     req_data = json.loads(request.data)
                     jobId = req_data['jobId']
-                    # jobId = data['jobId']
                     if jobId not in self._session_map:
                         print('WARNING: webhook/progress unknown jobId')
                         return '', 200
+                    status = req_data['status']
                     entry = self._session_map[jobId]
                     mypbar = entry['pbar']
                     mysofar = entry['sofar']
@@ -51,16 +51,19 @@ class ProgressHandler(object):
                     adding = int(round(progress - mysofar))
                     entry['calculated'] += adding
                     # print('####### progress={}, adding={}, mysofar={} #######'.format(progress, adding, mysofar))
-                    #mypbar.set_description(desc=details)
                     mypbar.set_postfix(kwargs=details)
                     mypbar.update(adding)
                     entry['sofar'] = progress
                     if progress >= 100:
                         if (entry['calculated'] < 100):
                             # fix pbar to 100% (may be less as we use 'round' to add only integers)
+                            adding = 100 - entry['calculated']
                             mypbar.update(100 - entry['calculated'])
-                            mypbar.close()
+                            entry['calculated'] += adding
+                    if self._trackerClass.updatePbarByStatus(pbar=mypbar, status=status):
+                        mypbar.close()
                         self._shutdown()
+                    
                 except Exception as error:
                     print('ERROR in progress webhook: {}'.format(error))
                     return '', 200
