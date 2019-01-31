@@ -1,6 +1,8 @@
 import json
 
 JSON_HEADERS = {'Content-Type': 'application/json'}
+FORM_URLENCODED_HEADERS = {'Content-Type': 'application/x-www-form-urlencoded'}
+FORM_DATA_HEADERS = {'Content-Type': 'multipart/form-data'}
 
 def report_request_error(response, operation):
     json_data = json.loads(response.text)

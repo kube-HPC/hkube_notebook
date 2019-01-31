@@ -2,7 +2,7 @@ import setuptools
 from setuptools import setup
 
 setup(name='hkube_notebook',
-    version='0.2',
+    version='0.3',
     description='hkube api for Jupyter Notebook',
     author='Amir Yiron',
     license='MIT',

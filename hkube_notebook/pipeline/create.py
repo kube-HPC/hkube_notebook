@@ -11,9 +11,10 @@ class PipelineBuilder(object):
         self._nodes = list()
         self._options = options
         self._base_url = api_server_base_url
+        self._alg_mgr = AlgorithmManager(api_server_base_url=api_server_base_url)
 
     def add_node(self, node_name, alg_name, input, extra_data=None):
-        algorithms = AlgorithmManager.get_all(api_server_base_url=self._base_url, only_names=True)
+        algorithms = self._alg_mgr.get_all(only_names=True)
         if alg_name not in algorithms:
             print('ERROR: unknown algorithm "{name}"'.format(name=alg_name))
             print('Registered algorithms: {algs}'.format(algs=algorithms))

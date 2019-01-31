@@ -1,18 +1,27 @@
 import requests
 import json
-from ..api_utils import report_request_error, is_success, JSON_HEADERS
+import inspect
+import tarfile
+import os
+import platform
+import getpass
+from ..api_utils import report_request_error, is_success, JSON_HEADERS, FORM_URLENCODED_HEADERS
 
 class AlgorithmManager(object):
     """ Manages algorithms in hkube """
 
-    @classmethod
-    def _get_alg_url(clas, api_server_base_url):
-        return '{base}/store/algorithms'.format(base=api_server_base_url)
+    def __init__(self, api_server_base_url):
+        self._base_url = api_server_base_url
 
-    @classmethod
-    def get_all(cls, api_server_base_url, only_names=False):
+    def _get_store_url(self):
+        return '{base}/store/algorithms'.format(base=self._base_url)
+
+    def _get_apply_url(self):
+        return '{base}/apply/algorithms'.format(base=self._base_url)
+
+    def get_all(self, only_names=False):
         """ Get all algorithms """
-        response = requests.get(cls._get_alg_url(api_server_base_url))
+        response = requests.get(self._get_store_url())
         if not is_success(response):
             report_request_error(response, 'get algorithms')
             return list()
@@ -24,8 +33,7 @@ class AlgorithmManager(object):
         print("Got {num} algorithms: {names}".format(num=len(json_data), names=algs_names))
         return json_data
 
-    @classmethod
-    def add(cls, api_server_base_url, alg_name, image, cpu, mem, options=None, min_hot_workers=None):
+    def add(self, alg_name, image, cpu, mem, options=None, min_hot_workers=None):
         """ Add algorithm to hkube """
         algorithm = {
             "name": alg_name,
@@ -39,7 +47,7 @@ class AlgorithmManager(object):
             algorithm['minHotWorkers'] = min_hot_workers
 
         json_data = json.dumps(algorithm)
-        response = requests.post(cls._get_alg_url(api_server_base_url), headers=JSON_HEADERS, data=json_data)
+        response = requests.post(self._get_store_url(), headers=JSON_HEADERS, data=json_data)
         if not is_success(response):
             report_request_error(response, 'post algorithm {name}'.format(name=alg_name))
             return False
@@ -47,10 +55,9 @@ class AlgorithmManager(object):
         print("algorithm {alg} posted successfully".format(alg=alg_name))
         return True
 
-    @classmethod
-    def delete(cls, api_server_base_url, alg_name):
+    def delete(self, alg_name):
         """ delete algorithm from hkube """
-        response = requests.delete('{base}/{name}'.format(base=cls._get_alg_url(api_server_base_url), name=alg_name))
+        response = requests.delete('{base}/{name}'.format(base=self._get_store_url(), name=alg_name))
         if not is_success(response):
             report_request_error(response, 'delete algorithm "{name}"'.format(name=alg_name))
             return False
@@ -58,3 +65,103 @@ class AlgorithmManager(object):
         print("OK: algorithm {name} was deleted successfully".format(name=alg_name))
         return True
     
+    def apply(self, compressed_alg_file, config):
+        """ Request to build/rebuild an algorithm image """
+        files = {'zip': open(compressed_alg_file,'rb')}
+        json_config = json.dumps(config)
+        values = { 'payload': json_config }
+        response = requests.post(self._get_apply_url(), files=files, data=values)
+        if not is_success(response):
+            report_request_error(response, 'apply algorithm "{name}"'.format(name=config['name']))
+            return False
+        
+        print("OK: algorithm {name} was applied successfully".format(name=config['name']))
+        return True
+
+    def create_config(self, alg_name, entryfile, cpu=1, mem='512Mi', minHotWorkers=0, alg_env=None, worker_env=None, options=None):
+        config = {
+            "name": alg_name,
+            "env": "python",
+            "code": {
+                "entryPoint": entryfile
+            },
+            "algorithmImage": "hkube/{}".format(alg_name),
+            "cpu": cpu,
+            "mem": mem,
+            "minHotWorkers": minHotWorkers,
+            "userInfo": {
+                "platform": platform.system(),
+                "hostname": platform.node(),
+                "username": getpass.getuser()
+            }
+        }
+        if type(worker_env) is dict:
+            config['workerEnv'] = worker_env
+        if type(alg_env) is dict:
+            config['algorithmEnv'] = alg_env
+        if type(options) is dict:
+            config['options'] = options
+        return config
+
+
+    def create_algfile_by_functions(self, init_func, start_func, stop_func, exit_func):
+        """ 
+        Create algorithm code from given functions inplementations then compress to tar.gz
+
+        :param init_func algorithm 'init' function
+        :param start_func algorithm 'start' function
+        :param stop_func algorithm 'stop' function
+        :param exit_func algorithm 'exit' function
+        :return entry_filename, compressed_filename
+        """
+        # create alg file code
+        func_list = [
+            ('init', init_func),
+            ('start', start_func), 
+            ('stop', stop_func), 
+            ('exit', exit_func)
+            ]
+        alg_code = ''
+        for func_info in func_list:
+            try:
+                func = func_info[1]
+                func_name = func_info[0]
+                func_code = inspect.getsource(func)
+                def_func = 'def {func_name}'.format(func_name=func.__name__)
+                func_code = func_code.replace(def_func, 'def ' + func_name, 1)
+                alg_code += (func_code + '\n')
+            except Exception as error:
+                print('failure: {}'.format(error))
+                return None
+        
+        # write to file
+        filename = 'alg.py'
+        fd = open(filename, "w")
+        fd.write(alg_code)
+        fd.close()
+
+        # create tar.gz file
+        tarfilename = '{cwd}/alg.tar.gz'.format(cwd=os.getcwd())
+        with tarfile.open(tarfilename, mode='w:gz') as archive:
+            archive.add(filename)
+
+        return filename, tarfilename
+
+
+    def create_algfile_by_folder(self, folder_path):
+        """ Compress given python algorithm folder content to tar.gz """
+        # create tar.gz file recursively from all folder contents
+        tarfilename = '{cwd}/alg.tar.gz'.format(cwd=os.getcwd())
+        # folderpath_aslist = folder_path.split('/')
+        # just_folder = folderpath_aslist.pop()
+        # path_tofolder = '/'.join(folderpath_aslist)
+        cwd = os.getcwd()
+        folder_content_list = os.listdir(folder_path)
+        os.chdir(folder_path)
+        with tarfile.open(tarfilename, mode='w:gz') as archive:
+            for file in folder_content_list:
+                archive.add(file, recursive=True)
+        os.chdir(cwd)
+        return tarfilename
+
+

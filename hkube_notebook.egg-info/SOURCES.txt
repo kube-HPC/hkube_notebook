@@ -1,3 +1,4 @@
+README.md
 setup.py
 hkube_notebook/__init__.py
 hkube_notebook/api_utils.py
