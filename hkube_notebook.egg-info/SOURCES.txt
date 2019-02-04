@@ -2,7 +2,7 @@ README.md
 setup.py
 hkube_notebook/__init__.py
 hkube_notebook/api_utils.py
-hkube_notebook/setup.py
+hkube_notebook/version.py
 hkube_notebook.egg-info/PKG-INFO
 hkube_notebook.egg-info/SOURCES.txt
 hkube_notebook.egg-info/dependency_links.txt
@@ -15,3 +15,12 @@ hkube_notebook/pipeline/create.py
 hkube_notebook/pipeline/exec.py
 hkube_notebook/pipeline/progress.py
 hkube_notebook/pipeline/tracker.py
+hkube_notebook/test/__init__.py
+hkube_notebook/test/create_test.py
+hkube_notebook/test/test_alg.py
+hkube_notebook/test/test_api.py
+hkube_notebook/test/test_async.py
+hkube_notebook/test/test_jupyter.py
+hkube_notebook/test/test_alg/__init__.py
+hkube_notebook/test/test_alg/engine.py
+hkube_notebook/test/test_alg/main.py

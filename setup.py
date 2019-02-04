@@ -1,8 +1,8 @@
 import setuptools
 from setuptools import setup
-
+exec(open('hkube_notebook/version.py').read())
 setup(name='hkube_notebook',
-    version='0.1',
+    version=__version__,
     description='hkube api for Jupyter Notebook',
     author='Amir Yiron',
     license='MIT',

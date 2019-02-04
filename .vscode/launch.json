@@ -11,7 +11,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "stopOnEntry": true
+            "stopOnEntry": true,
         },
         {
             "name": "Python: Attach",

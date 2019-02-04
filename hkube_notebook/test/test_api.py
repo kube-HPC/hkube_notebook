@@ -1,3 +1,4 @@
+import os
 from hkube_notebook.pipeline.exec import PipelineExecutor
 from hkube_notebook.pipeline.create import PipelineBuilder
 from hkube_notebook.pipeline.tracker import TrackerType
