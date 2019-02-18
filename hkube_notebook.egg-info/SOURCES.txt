@@ -21,6 +21,6 @@ hkube_notebook/test/test_alg.py
 hkube_notebook/test/test_api.py
 hkube_notebook/test/test_async.py
 hkube_notebook/test/test_jupyter.py
-hkube_notebook/test/test_alg/__init__.py
-hkube_notebook/test/test_alg/engine.py
-hkube_notebook/test/test_alg/main.py
+hkube_notebook/test/test_algorithm/__init__.py
+hkube_notebook/test/test_algorithm/engine.py
+hkube_notebook/test/test_algorithm/main.py

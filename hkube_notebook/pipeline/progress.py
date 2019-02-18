@@ -97,7 +97,7 @@ class ProgressHandler(object):
         """ External shutdown of the server """
         shutdown_url = "http://{host}:{port}/webhook/shutdown".format(host=self._host, port=self._port)
         try:
-            requests.put(shutdown_url)
+            requests.put(shutdown_url, verify=False)
         except Exception:
             pass
         return

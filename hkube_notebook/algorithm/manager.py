@@ -5,10 +5,18 @@ import tarfile
 import os
 import platform
 import getpass
+import git
+from git import RemoteProgress
+import shutil
 from ..api_utils import report_request_error, is_success, JSON_HEADERS, FORM_URLENCODED_HEADERS
 
-class AlgorithmManager(object):
-    """ Manages algorithms in hkube """
+class CustomProgress(RemoteProgress):
+    def update(self, op_code, cur_count, max_count=None, message=''):
+        if message:
+            print(message, op_code, cur_count, max_count)
+
+class AlgorithmBuilder(object):
+    """ Builds, views and deletes algorithms in hkube """
 
     def __init__(self, api_server_base_url):
         self._base_url = api_server_base_url
@@ -21,7 +29,7 @@ class AlgorithmManager(object):
 
     def get_all(self, only_names=False):
         """ Get all algorithms """
-        response = requests.get(self._get_store_url())
+        response = requests.get(self._get_store_url(), verify=False)
         if not is_success(response):
             report_request_error(response, 'get algorithms')
             return list()
@@ -47,7 +55,7 @@ class AlgorithmManager(object):
             algorithm['minHotWorkers'] = min_hot_workers
 
         json_data = json.dumps(algorithm)
-        response = requests.post(self._get_store_url(), headers=JSON_HEADERS, data=json_data)
+        response = requests.post(self._get_store_url(), headers=JSON_HEADERS, data=json_data, verify=False)
         if not is_success(response):
             report_request_error(response, 'post algorithm {name}'.format(name=alg_name))
             return False
@@ -57,7 +65,7 @@ class AlgorithmManager(object):
 
     def delete(self, alg_name):
         """ delete algorithm from hkube """
-        response = requests.delete('{base}/{name}'.format(base=self._get_store_url(), name=alg_name))
+        response = requests.delete('{base}/{name}'.format(base=self._get_store_url(), name=alg_name), verify=False)
         if not is_success(response):
             report_request_error(response, 'delete algorithm "{name}"'.format(name=alg_name))
             return False
@@ -70,7 +78,7 @@ class AlgorithmManager(object):
         files = {'zip': open(compressed_alg_file,'rb')}
         json_config = json.dumps(config)
         values = { 'payload': json_config }
-        response = requests.post(self._get_apply_url(), files=files, data=values)
+        response = requests.post(self._get_apply_url(), files=files, data=values, verify=False)
         if not is_success(response):
             report_request_error(response, 'apply algorithm "{name}"'.format(name=config['name']))
             return False
@@ -165,3 +173,32 @@ class AlgorithmManager(object):
         return tarfilename
 
 
+    def create_algfile_by_github(self, github_url, alg_root_in_project='', clean=True):
+        """ 
+        Clone github algorithm project and compress it to tar.gz
+        
+        :param github_url github algorithm project url, e.g.: git@github.com:kube-HPC/ds-alg-example.git
+        :param alg_root_in_project relative root path of python algorithm within the project repo folder
+        :param clean if True remove temporary folder where we put alg project just after compressing it
+        """
+        local_dir = f'{os.getcwd()}/githubclone'
+        if os.path.exists(local_dir):
+            print('removing prev local repo...')
+            shutil.rmtree(local_dir)
+        os.mkdir(local_dir)
+        try:
+            repo = git.Repo.clone_from(github_url, local_dir, branch='master', progress=CustomProgress())
+        except Exception as error:
+            print(f'Error: failed to clone repo: {error.__str__()}')
+            return None
+
+        if repo is None:
+            print('ERROR: got no repo')
+            return None
+        
+        alg_path = f'{local_dir}/{alg_root_in_project}'
+        tarfilename = self.create_algfile_by_folder(alg_path)
+        if clean:
+            print('removing local repo...')
+            shutil.rmtree(local_dir)
+        return tarfilename

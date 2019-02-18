@@ -82,7 +82,7 @@ class PipelineExecutor(object):
         body = self._get_exec_body(input)
         exec_url = self._get_exec_url()
         json_data = json.dumps(body)
-        response = requests.post(exec_url, headers=JSON_HEADERS, data=json_data)
+        response = requests.post(exec_url, headers=JSON_HEADERS, data=json_data, verify=False)
         if not is_success(response):
             report_request_error(response, 'exec pipeline "{name}"'.format(name=self._name))
             tracker.cleanup()
@@ -143,7 +143,7 @@ class PipelineExecutor(object):
         print("getting results...")
         result_url = self._base_url + '/exec/results/' + jobId
         time.sleep(1)
-        response = requests.get(result_url, headers=JSON_HEADERS)
+        response = requests.get(result_url, headers=JSON_HEADERS, verify=False)
         # print('result status: {}'.format(response.status_code))
         if is_success(response):
             json_data = json.loads(response.text)
@@ -189,7 +189,7 @@ class PipelineExecutor(object):
             "reason": reason
         }
         json_data = json.dumps(stop_body)
-        response = requests.post(stop_url, headers=JSON_HEADERS, data=json_data)
+        response = requests.post(stop_url, headers=JSON_HEADERS, data=json_data, verify=False)
         if not is_success(response):
             report_request_error(response, 'delete pipeline "{name}"'.format(name=self._name))
             return False
@@ -234,7 +234,7 @@ class PipelineExecutor(object):
     def get_status(cls, api_server_base_url, jobId):
         """ Get status of given jobId """
         status_url = '{base}/exec/status/{jobId}'.format(base=api_server_base_url, jobId=jobId)
-        response = requests.get(status_url, headers=JSON_HEADERS)
+        response = requests.get(status_url, headers=JSON_HEADERS, verify=False)
         if not is_success(response):
             report_request_error(response, 'status request for {}'.format(jobId))
             return None
@@ -245,7 +245,7 @@ class PipelineExecutor(object):
     def get_all_stored(cls, api_server_base_url):
         """ Get all stored pipelines """
         pipelines_url = '{base}/store/pipelines'.format(base=api_server_base_url)
-        response = requests.get(pipelines_url)
+        response = requests.get(pipelines_url, verify=False)
         if not is_success(response):
             report_request_error(response, 'get stored pipelines')
             return list()
@@ -259,7 +259,7 @@ class PipelineExecutor(object):
     def get_running_jobs(cls, api_server_base_url):
         """ Get all running pipeline jobs """
         pipelines_url = '{base}/exec/pipelines/list'.format(base=api_server_base_url)
-        response = requests.get(pipelines_url)
+        response = requests.get(pipelines_url, verify=False)
         if not is_success(response):
             report_request_error(response, 'get running pipelines')
             return list()
