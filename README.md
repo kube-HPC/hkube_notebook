@@ -1,6 +1,6 @@
 # hkube_notebook
 This python3 library for Jupyter Notebook enables to integrate with hkube system:
-- Algorithms: add, list and delete algorithms.
+- Algorithms: add (including image built), list and delete algorithms.
 - Pipelines: Create and store pipelines, get stored pipelines, etc.
 - Execution: execute pipeline, track execution status by a progress bar, get the results, etc.
 # Intructions for Developer
@@ -10,9 +10,11 @@ This python3 library for Jupyter Notebook enables to integrate with hkube system
 - Update pip3 and install dependecies:
 ```sh
 $ python3 -m pip install --upgrade pip
+$ python3 -m pip install pipreqs
 $ python3 -m pip install flask=0.12.2
 $ python3 -m pip install tqdm=4.28.1
 ```
+- Better work with a virtual env (in that case install required packages also in your virtual env)
 - Install the library using the following shell commands (notice that library version is taken from setup.py):
 ```sh
 $ cd hkube_notebook
@@ -24,7 +26,8 @@ $ python3 -m pip list | grep hkube
 ```python
 import hkube_notebook
 ```
-- Example and test notebook: *hkube_notebook.ipynb*
+- Example and test notebook for pipeline build, store, execute and track: *hkube_notebook.ipynb*
+- DS pipeline example notebook, including algorithms build and end-to-end DS pipeline: preprocess + split data + train batch + find best model, train and dump it: *DS Example Pipeline.ipynb*
 - Tested: Python 3.6.8 from Anaconda
 # Upload package to python registry
 See: https://packaging.python.org/tutorials/packaging-projects/
