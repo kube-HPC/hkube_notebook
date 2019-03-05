@@ -3,6 +3,10 @@ This python3 library for Jupyter Notebook enables to integrate with hkube system
 - Algorithms: add (including image built), list and delete algorithms.
 - Pipelines: Create and store pipelines, get stored pipelines, etc.
 - Execution: execute pipeline, track execution status by a progress bar, get the results, etc.
+Algorithm could be built and added to Hkube in 3 methods:
+- Function/s: pass your algorithm function/s (only 'start' function is must) - requirements.txt is created automatically.
+- Algorithm folder: pass your algorithm code folder - requirements.txt is expected.
+- Github: pass algorithm project github url - requirements.txt is expected.
 # Intructions for Developer
 - Download the hkube project **hkube_notebook**
 - Make sure you have python3 and Jupyter Notebook installed (Anaconda is recommended)
