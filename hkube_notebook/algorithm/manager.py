@@ -102,8 +102,9 @@ class AlgorithmBuilder(object):
             report_request_error(response, 'get algorithm build status')
             return None
         json_data = json.loads(response.text)
-        alg = json_data['algorithm']
-        name = alg['name']
+        #alg = json_data['algorithm']
+        #name = alg['name']
+        name = json_data['algorithmName']
         status = json_data['status']
         if verbose:
             print(f'algorithm {name} buildId {build_id} status: {status}')
@@ -162,12 +163,11 @@ class AlgorithmBuilder(object):
         print(f'Algorithm {name} build failed after {build_time_sec} seconds')
         return state
 
-    def create_config(self, alg_name, entryfile, cpu=1, mem='512Mi', minHotWorkers=0, version=None, alg_env=None, worker_env=None, options=None):
+    def create_config(self, alg_name, entryfile, is_image=False, cpu=1, mem='512Mi', minHotWorkers=0, version=None, alg_env=None, worker_env=None, options=None):
         config = {
             "name": alg_name,
             "env": "python",
             "entryPoint": entryfile,
-            "algorithmImage": "hkube/{}".format(alg_name),
             "cpu": cpu,
             "mem": mem,
             "minHotWorkers": minHotWorkers,
@@ -177,6 +177,8 @@ class AlgorithmBuilder(object):
                 "username": getpass.getuser()
             }
         }
+        if is_image:
+            config['algorithmImage'] = "hkube/{}".format(alg_name)
         if type(worker_env) is dict:
             config['workerEnv'] = worker_env
         if type(alg_env) is dict:

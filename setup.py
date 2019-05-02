@@ -1,4 +1,5 @@
 import setuptools
+from hkube_notebook.version import __version__
 from setuptools import setup
 exec(open('hkube_notebook/version.py').read())
 setup(name='hkube_notebook',

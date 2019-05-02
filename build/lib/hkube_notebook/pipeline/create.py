@@ -1,7 +1,7 @@
 import json
 import requests
 from ..api_utils import report_request_error, is_success, JSON_HEADERS
-from ..algorithm.manager import AlgorithmManager
+from ..algorithm.manager import AlgorithmBuilder
 
 class PipelineBuilder(object):
     """ Pipeline creator: build pipeline, get as raw, store, delete, etc. """
@@ -11,13 +11,22 @@ class PipelineBuilder(object):
         self._nodes = list()
         self._options = options
         self._base_url = api_server_base_url
+        self._alg_mgr = AlgorithmBuilder(api_server_base_url=api_server_base_url)
 
-    def add_node(self, node_name, alg_name, input, extra_data=None):
-        algorithms = AlgorithmManager.get_all(api_server_base_url=self._base_url, only_names=True)
-        if alg_name not in algorithms:
-            print('ERROR: unknown algorithm "{name}"'.format(name=alg_name))
-            print('Registered algorithms: {algs}'.format(algs=algorithms))
-            return False
+    def add_node(self, node_name, alg_name, input, extra_data=None, validate_alg=False):
+        """
+        Add node to pipeline.
+        :param node_name node name
+        :param alg_name algorithm name
+        :param extra_data node extra_data object (used in eval-alg)
+        :param validate_alg if True check alg_name to be a known algorithm
+        """
+        if validate_alg:
+            algorithms = self._alg_mgr.get_all(only_names=True)
+            if alg_name not in algorithms:
+                print('ERROR: unknown algorithm "{name}"'.format(name=alg_name))
+                print('Registered algorithms: {algs}'.format(algs=algorithms))
+                return False
         node = {
             "nodeName": node_name,
             "algorithmName": alg_name,
@@ -57,7 +66,7 @@ class PipelineBuilder(object):
         json_data = json.dumps(raw)
 
         # run pipeline
-        response = requests.post(store_url, headers=JSON_HEADERS, data=json_data)
+        response = requests.post(store_url, headers=JSON_HEADERS, data=json_data, verify=False)
         if not is_success(response):
             report_request_error(response, 'store pipeline "{name}"'.format(name=self._name))
             return False
@@ -67,7 +76,7 @@ class PipelineBuilder(object):
     def delete(self):
         """ Delete stored pipeline from hkube using api-server"""
         delete_url = '{base}/store/pipelines/{name}'.format(base=self._base_url, name=self._name)
-        response = requests.delete(delete_url)
+        response = requests.delete(delete_url, verify=False)
         if not is_success(response):
             report_request_error(response, 'delete pipeline "{name}"'.format(name=self._name))
             return False
