@@ -45,13 +45,16 @@ $ python3 -m pip install --user --upgrade twine
 ```sh
 $ # create a 'dist' diectory with whl and gz files:
 $ python3 setup.py sdist bdist_wheel
-$ # upload to test registry:
-$ twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+$ # upload to python registry:
+$ python3 -m twine upload --repository-url <url> dist/*
+$ # for python test registry use: <url>=https://test.pypi.org/legacy/
+$ # Create account for python test registry at: https://test.pypi.org/account/register/
 ```
 # Install package in user python3 env
 - In user python environment:
 ```sh
-$ python3 -m pip install --index-url https://test.pypi.org/simple/ hkube_notebook
+$ python3 -m pip install --index-url <url> hkube_notebook
+$ # for python test registry use: <url>=https://test.pypi.org/simple/
 $ # now install missing dependency packages...
 ```
 
