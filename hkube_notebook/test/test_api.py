@@ -55,7 +55,8 @@ input = {
 # pm.get_results()
 
 pipe_name = 'moshe'
-api_server = 'http://localhost:3000/api/v1'
+api_server = 'http://localhost:3000/api/v1' # local
+api_server = 'https://10.32.10.11/hkube/api-server/api/v1' # test cluster
 pb = PipelineBuilder(pipe_name, api_server_base_url=api_server)
 pb.add_node(node_name='green', alg_name='green-alg', input=["@flowInput.tata"])
 pb.add_node(node_name='yellow', alg_name='yellow-alg', input=["@green"])

@@ -9,8 +9,8 @@ def bar(args):
     print("bar")
     return 54
 
-api_server = 'http://localhost:3000/api/v1'
-#api_server = 'https://10.32.10.19/hkube/api-server/api/v1'
+# api_server = 'http://localhost:3000/api/v1'
+api_server = 'https://10.32.10.19/hkube/api-server/api/v1'
 alg_mgr = AlgorithmBuilder(api_server)
 alg_list = alg_mgr.get_all()
 
