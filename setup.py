@@ -5,7 +5,10 @@ VERSION='1.0.0-dev1'
 packages = setuptools.find_packages()
 
 requires = [
-    'flask'
+    'flask>=0.12.2',
+    'pipreqs',
+    'tqdm>=4.28.1'
+
 ]
 
 with open("README.md", "r") as f:

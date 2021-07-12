@@ -2,6 +2,7 @@ import json
 import requests
 from ..api_utils import report_request_error, is_success, JSON_HEADERS
 from ..algorithm.manager import AlgorithmBuilder
+from hkube_notebook.config import config
 
 class PipelineBuilder(object):
     """ Pipeline creator: build pipeline, get as raw, store, delete, etc. """
@@ -66,7 +67,7 @@ class PipelineBuilder(object):
         json_data = json.dumps(raw)
 
         # run pipeline
-        response = requests.post(store_url, headers=JSON_HEADERS, data=json_data, verify=False)
+        response = requests.post(store_url, headers=JSON_HEADERS, data=json_data, verify=config.api['verify_ssl'])
         if not is_success(response):
             report_request_error(response, 'store pipeline "{name}"'.format(name=self._name))
             return False
@@ -76,7 +77,7 @@ class PipelineBuilder(object):
     def delete(self):
         """ Delete stored pipeline from hkube using api-server"""
         delete_url = '{base}/store/pipelines/{name}'.format(base=self._base_url, name=self._name)
-        response = requests.delete(delete_url, verify=False)
+        response = requests.delete(delete_url, verify=config.api['verify_ssl'])
         if not is_success(response):
             report_request_error(response, 'delete pipeline "{name}"'.format(name=self._name))
             return False

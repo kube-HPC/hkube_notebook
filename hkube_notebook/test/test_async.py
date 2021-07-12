@@ -1,6 +1,7 @@
 from hkube_notebook.pipeline.exec import PipelineExecutor
 from hkube_notebook.pipeline.create import PipelineBuilder
 from hkube_notebook.pipeline.tracker import TrackerType
+from hkube_notebook.config import config
 
 input = {
     "text": ["In mathematics and computer science, a directed acyclic graph ",
@@ -48,7 +49,7 @@ input = {
 }
 
 pipe_name = 'orit'
-api_server = 'http://localhost:3000/api/v1'
+api_server = '{0}/hkube/api-server/api/v1'.format(config.api['base_url'])
 pb = PipelineBuilder(pipe_name, api_server_base_url=api_server)
 pb.add_node(node_name='green', alg_name='green-alg', input=["@flowInput.tata"])
 pb.add_node(node_name='yellow', alg_name='yellow-alg', input=["@green"])

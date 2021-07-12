@@ -12,6 +12,7 @@ import shutil
 import pathlib
 import subprocess
 from ..api_utils import report_request_error, is_success, JSON_HEADERS, FORM_URLENCODED_HEADERS
+from hkube_notebook.config import config as config_object
 
 class CustomProgress(RemoteProgress):
     def update(self, op_code, cur_count, max_count=None, message=''):
@@ -50,7 +51,7 @@ class AlgorithmBuilder(object):
 
     def get_all(self, only_names=False):
         """ Get all algorithms """
-        response = requests.get(self._get_store_url(), verify=False)
+        response = requests.get(self._get_store_url(), verify=config_object.api['verify_ssl'])
         if not is_success(response):
             report_request_error(response, 'get algorithms')
             return list()
@@ -76,7 +77,7 @@ class AlgorithmBuilder(object):
             algorithm['minHotWorkers'] = min_hot_workers
 
         json_data = json.dumps(algorithm)
-        response = requests.post(self._get_store_url(), headers=JSON_HEADERS, data=json_data, verify=False)
+        response = requests.post(self._get_store_url(), headers=JSON_HEADERS, data=json_data, verify=config_object.api['verify_ssl'])
         if not is_success(response):
             report_request_error(response, 'post algorithm {name}'.format(name=alg_name))
             return False
@@ -86,7 +87,7 @@ class AlgorithmBuilder(object):
 
     def delete(self, alg_name):
         """ delete algorithm from hkube """
-        response = requests.delete('{base}/{name}'.format(base=self._get_store_url(), name=alg_name), verify=False)
+        response = requests.delete('{base}/{name}'.format(base=self._get_store_url(), name=alg_name), verify=config_object.api['verify_ssl'])
         if not is_success(response):
             report_request_error(response, 'delete algorithm "{name}"'.format(name=alg_name))
             return False
@@ -97,7 +98,7 @@ class AlgorithmBuilder(object):
     def get_build_state(self, build_id, verbose=True):
         """ return algorithm build state (including status and all algorithm properties) """
         status_url = self._get_build_status_url(build_id)
-        response = requests.get(status_url, verify=False)
+        response = requests.get(status_url, verify=config_object.api['verify_ssl'])
         if not is_success(response):
             report_request_error(response, 'get algorithm build status')
             return None
@@ -121,7 +122,7 @@ class AlgorithmBuilder(object):
         files = {'file': open(compressed_alg_file,'rb')}
         json_config = json.dumps(config)
         values = { 'payload': json_config }
-        response = requests.post(self._get_apply_url(), files=files, data=values, verify=False)
+        response = requests.post(self._get_apply_url(), files=files, data=values, verify=config_object.api['verify_ssl'])
         if not is_success(response):
             report_request_error(response, f'build algorithm "{name}"')
             return None

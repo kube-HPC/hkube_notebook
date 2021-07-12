@@ -1,12 +1,12 @@
 import json
 import logging
 import time
-from tqdm import tqdm_notebook, tqdm
 from flask import Flask, request, abort
 from threading import Thread
 import requests
 import socket
 import random
+from hkube_notebook.config import config
 
 class ProgressHandler(object):
     """ Manage flask server for handling progress messages """
@@ -97,7 +97,7 @@ class ProgressHandler(object):
         """ External shutdown of the server """
         shutdown_url = "http://{host}:{port}/webhook/shutdown".format(host=self._host, port=self._port)
         try:
-            requests.put(shutdown_url, verify=False)
+            requests.put(shutdown_url, verify=config.api['verify_ssl'])
         except Exception:
             pass
         return

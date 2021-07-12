@@ -1,6 +1,6 @@
 from abc import ABC
 from .progress import ProgressHandler
-from tqdm import tqdm_notebook, tqdm
+from tqdm.autonotebook import tqdm
 from threading import Thread
 import requests
 import socket
@@ -41,7 +41,7 @@ class ListenerTracker(PipelineTracker):
         self._executor = executor
         self._session_map = dict()
         self._progress_port = progress_port
-        self._pbar = tqdm_notebook(total=100)   # create new pregress bar
+        self._pbar = tqdm(total=100)   # create new pregress bar
         self._pbar.set_description(desc=name)
         self._jobId = None
 
@@ -70,7 +70,7 @@ class ListenerTracker(PipelineTracker):
         # wait to finish
         if timeout_sec is not 0:
             self._flask_thread.join(timeout_sec)
-            if self._flask_thread.isAlive() and timeout_sec is not None and timeout_sec > 0:
+            if self._flask_thread.is_alive() and timeout_sec is not None and timeout_sec > 0:
                 print('WARNING: not completed after timeout of {} seconds - killing flask server...'.format(timeout_sec))
                 self.cleanup()
 
@@ -87,7 +87,7 @@ class PollingTracker(PipelineTracker):
     def __init__(self, executor, name):
         self._executor = executor
         self._stop = False
-        self._pbar = tqdm_notebook(total=100)   # create new pregress bar
+        self._pbar = tqdm(total=100)   # create new pregress bar
         self._pbar.set_description(desc=name)
         self._jobId = None
 

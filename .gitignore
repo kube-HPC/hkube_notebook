@@ -118,4 +118,5 @@ dmypy.json
 .vscode
 **/__pycache__
 build
-
+temp
+*.tar.gz
