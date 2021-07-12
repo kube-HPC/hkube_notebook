@@ -1,13 +1,26 @@
 import setuptools
-from hkube_notebook.version import __version__
 from setuptools import setup
-exec(open('hkube_notebook/version.py').read())
+VERSION='1.0.0-dev1'
+
+packages = setuptools.find_packages()
+
+requires = [
+    'flask'
+]
+
+with open("README.md", "r") as f:
+    long_description = f.read()
+
+
 setup(name='hkube_notebook',
-    version=__version__,
+    version=VERSION,
     description='hkube api for Jupyter Notebook',
     author='Amir Yiron',
     license='MIT',
-    packages=setuptools.find_packages(),
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    packages=packages,
+    install_requires=requires,
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
