@@ -1,13 +1,14 @@
 import setuptools
 from setuptools import setup
-VERSION='1.0.0-dev1'
+VERSION='1.0.0-dev2'
 
 packages = setuptools.find_packages()
 
 requires = [
     'flask>=0.12.2',
     'pipreqs',
-    'tqdm>=4.28.1'
+    'tqdm>=4.28.1',
+    'gitpython'
 
 ]
 

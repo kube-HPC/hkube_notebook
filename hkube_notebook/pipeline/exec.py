@@ -9,14 +9,14 @@ import random
 from .progress import ProgressHandler
 from .tracker import TrackerType, ListenerTracker, PollingTracker
 from ..api_utils import report_request_error, is_success, JSON_HEADERS
-from hkube_notebook.config import config
+from hkube_notebook.config import config, utils
 
 MAX_RESULTS = 10
 
 class PipelineExecutor(object):
     """ Manages an Hkube Pipeline execution (exec, run, track status, get results, stop, etc.) """
 
-    def __init__(self, api_server_base_url, name=None, raw=None, tracker=TrackerType.LISTENER, first_progress_port=0):
+    def __init__(self, name=None, raw=None, tracker=TrackerType.LISTENER, first_progress_port=0, options={}):
         """ 
         :param name pipeline name, optional - for stored pipeline
         :param raw raw pipeline object, optional - for raw pipeline (overides name if given)
@@ -33,7 +33,8 @@ class PipelineExecutor(object):
             self._name = raw['name']    
         else:
             self._name = name
-        self._base_url = api_server_base_url
+        self._options=options
+        self._base_url = utils.api_server_url(options)
         self._tracker_type = tracker
         self._trackers = dict()
         if first_progress_port == 0:
@@ -217,7 +218,7 @@ class PipelineExecutor(object):
             print('executor has no active jobs')
             return status_list
         for jobId in self._trackers.keys():
-            status_info = PipelineExecutor.get_status(api_server_base_url=self._base_url, jobId=jobId)
+            status_info = PipelineExecutor.get_status(options=self._options, jobId=jobId)
             status_list.append(status_info)
             status = status_info['status']
             data = status_info['data']
@@ -228,13 +229,13 @@ class PipelineExecutor(object):
         return status_list
             
     def _get_status(self, jobId):
-        return PipelineExecutor.get_status(api_server_base_url=self._base_url, jobId=jobId)
+        return PipelineExecutor.get_status(options=self._options, jobId=jobId)
 
 
     @classmethod
-    def get_status(cls, api_server_base_url, jobId):
+    def get_status(cls, options, jobId):
         """ Get status of given jobId """
-        status_url = '{base}/exec/status/{jobId}'.format(base=api_server_base_url, jobId=jobId)
+        status_url = '{base}/exec/status/{jobId}'.format(base=utils.api_server_url(options), jobId=jobId)
         response = requests.get(status_url, headers=JSON_HEADERS, verify=config.api['verify_ssl'])
         if not is_success(response):
             report_request_error(response, 'status request for {}'.format(jobId))
@@ -243,9 +244,9 @@ class PipelineExecutor(object):
 
 
     @classmethod
-    def get_all_stored(cls, api_server_base_url):
+    def get_all_stored(cls, options):
         """ Get all stored pipelines """
-        pipelines_url = '{base}/store/pipelines'.format(base=api_server_base_url)
+        pipelines_url = '{base}/store/pipelines'.format(base=utils.api_server_url(options))
         response = requests.get(pipelines_url, verify=config.api['verify_ssl'])
         if not is_success(response):
             report_request_error(response, 'get stored pipelines')
@@ -257,9 +258,9 @@ class PipelineExecutor(object):
         return json_data
 
     @classmethod
-    def get_running_jobs(cls, api_server_base_url):
+    def get_running_jobs(cls, options):
         """ Get all running pipeline jobs """
-        pipelines_url = '{base}/exec/pipelines/list'.format(base=api_server_base_url)
+        pipelines_url = '{base}/exec/pipeline/list'.format(base=utils.api_server_url(options))
         response = requests.get(pipelines_url, verify=config.api['verify_ssl'])
         if not is_success(response):
             report_request_error(response, 'get running pipelines')

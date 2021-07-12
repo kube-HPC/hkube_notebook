@@ -138,7 +138,7 @@ class PollingTracker(PipelineTracker):
         # wait to finish
         if timeout_sec is not 0:
             self._status_thread.join(timeout_sec)
-            if self._status_thread.isAlive() and timeout_sec is not None:
+            if self._status_thread.is_alive() and timeout_sec is not None:
                 print('WARNING: not completed after timeout of {} seconds - killing status server...'.format(timeout_sec))
                 self.cleanup()
 

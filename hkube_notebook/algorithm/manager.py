@@ -12,7 +12,7 @@ import shutil
 import pathlib
 import subprocess
 from ..api_utils import report_request_error, is_success, JSON_HEADERS, FORM_URLENCODED_HEADERS
-from hkube_notebook.config import config as config_object
+from hkube_notebook.config import config as config_object, utils
 
 class CustomProgress(RemoteProgress):
     def update(self, op_code, cur_count, max_count=None, message=''):
@@ -37,8 +37,8 @@ class AlgorithmBuilder(object):
 
     POLL_INTERVAL_SEC = 1
     
-    def __init__(self, api_server_base_url):
-        self._base_url = api_server_base_url
+    def __init__(self, options):
+        self._base_url = utils.api_server_url(options)
 
     def _get_store_url(self):
         return f'{self._base_url}/store/algorithms'

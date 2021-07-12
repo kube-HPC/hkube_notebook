@@ -2,17 +2,17 @@ import json
 import requests
 from ..api_utils import report_request_error, is_success, JSON_HEADERS
 from ..algorithm.manager import AlgorithmBuilder
-from hkube_notebook.config import config
+from hkube_notebook.config import config, utils
 
 class PipelineBuilder(object):
     """ Pipeline creator: build pipeline, get as raw, store, delete, etc. """
 
-    def __init__(self, name, api_server_base_url, options={}):
+    def __init__(self, name, options={}):
         self._name = name
         self._nodes = list()
         self._options = options
-        self._base_url = api_server_base_url
-        self._alg_mgr = AlgorithmBuilder(api_server_base_url=api_server_base_url)
+        self._base_url = utils.api_server_url(options)
+        self._alg_mgr = AlgorithmBuilder(options)
 
     def add_node(self, node_name, alg_name, input, extra_data=None, validate_alg=False):
         """
