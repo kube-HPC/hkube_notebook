@@ -12,7 +12,7 @@ def getBoolEnv(name, defaultValue):
 
 api = {
     "base_url": os.environ.get('API_BASE_URL', 'http://api-server:3000'),
-    "path": os.environ.get('API_SERVER_PATH','/api/v1'),
+    "path": os.environ.get('API_SERVER_PATH','api/v1'),
     "verify_ssl": getBoolEnv('API_VERIFY_SSL', 'True'),
 }
 logging = {
