@@ -1,6 +1,6 @@
 import setuptools
 from setuptools import setup
-VERSION='1.0.0-dev2'
+VERSION='1.0.0-dev3'
 
 packages = setuptools.find_packages()
 
